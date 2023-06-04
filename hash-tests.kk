@@ -39,7 +39,7 @@ fun test_get() {
     }
 }
 
-fun test_pop() {
+fun test_remove() {
     var map : hashmap<int,int> := hashmap(compare : (int, int) -> order)
     with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
@@ -49,8 +49,8 @@ fun test_pop() {
     }
 
     for(0, 1000) fn (i) {
-        println("Popping " ++ i.show() ++ " from map ")
-        map.pop(i)
+        println("Removing " ++ i.show() ++ " from map ")
+        map.remove(i)
         ()
     }
 }
@@ -81,7 +81,7 @@ fun main() {
             exn.show().println()
             ()
         }}) fn () {
-            test_pop()
+            test_remove()
         }
 }
 

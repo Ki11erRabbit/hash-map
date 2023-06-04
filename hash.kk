@@ -40,17 +40,9 @@ pub fun hasher(x : char) : int {
 pub extern hash(str : string) : int
     c "kk_hash"*/
 
-struct pair<a,b> {
+pub struct pair<a,b> {
     fst : a
     snd : b
-}
-
-fun first<a,b>(pair : pair<a,b>) : a {
-    pair.fst
-}
-
-fun second<a,b>(pair : pair<a,b>) : b {
-    pair.snd
 }
 
 pub struct hashmap<a,b> {
@@ -64,6 +56,11 @@ pub fun hashmap(cmp : (a,a) -> order) : hashmap<a,b> {
     Hashmap(0, [Nothing], cmp)
 }
 
+pub fun listhashmap<a,b>(list : list<pair<a,b>>, cmp : (a,a) -> order) : <div,hash<a>|_e> hashmap<a,b> {
+    Hashmap(list.length(), list.foldl(hashmap(cmp)) fn (map, pair) {
+        map.insert(pair.fst, pair.snd)
+    }, cmp)
+}
 
 fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
     
@@ -103,6 +100,10 @@ fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
 
 
 pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,div|_e> hashmap<a,b>{
+    hashmap-insert(map, key, value)
+}
+
+fun hashmap-insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,div|_e> hashmap<a,b>{
     val new_map = if map.amount / 2 > map.data.length() then {
         map.rehash()
     } else {
@@ -138,6 +139,11 @@ pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,div|_
 
 
 pub fun get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
+    hashmap-get(map, key)
+}
+
+
+fun hashmap-get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
     
     val hash_value = key.hash() % map.data.length();
     match map.data[hash_value] {
@@ -164,7 +170,11 @@ pub fun get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
 }
 
 
-pub fun pop<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
+pub fun remove<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
+    hashmap-remove(map, key)
+}
+
+fun hashmap-remove<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
     
     val hash_value = key.hash() % map.data.length()
     match map.data[hash_value] {
@@ -186,4 +196,92 @@ pub fun pop<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
             }
         }
     }
+}
+
+pub fun contains<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> bool {
+    match map.get(key) {
+        Nothing -> False
+        Just(_) -> True
+    }
+}
+
+pub fun list<a,b>(map : hashmap<a,b>) : <div|_e> list<pair<a,b>> {
+    hashmap-list(map)
+}
+
+fun hashmap-list<a,b>(map : hashmap<a,b>) : <div|_e> list<pair<a,b>> {
+    var list := []
+    map.data.reverse().foreach() fn (row) {
+        match row {
+            Nothing -> ()
+            Just(row) -> {
+                row.foreach() fn (pair) {
+                    list := Cons(pair, list)
+                    ()
+                }
+            }
+        }
+    }
+    list
+}
+
+
+pub fun keys<a,b>(hashmap : hashmap<a,b>) : <div|_e> list<a> {
+    hashmap.list().map() fn (pair) {
+        pair.fst
+    }
+}
+
+pub fun values<a,b>(hashmap : hashmap<a,b>) : <div|_e> list<b> {
+    hashmap.list().map() fn (pair) {
+        pair.snd
+    }
+}
+
+pub fun length<a,b>(map : hashmap<a,b>) : int {
+    map.amount
+}
+
+
+struct hashset<a>
+    data : hashmap<a,a>
+
+
+pub fun hashset(cmp : (a,a) -> order) : hashset<a> {
+    Hashset(hashmap(cmp))
+}
+
+pub fun hashset(list : list<a>, cmp : (a,a) -> order) : hashset<a> {
+    Hashset(list.foldl(hashmap(cmp)) fn (map, key) {
+        map.insert(key, key)
+    })
+}
+
+pub fun insert<a>(set : hashset<a>, key : a) : <hash<a>,div|_e> hashset<a> {
+    Hashset(hashmap-insert(set.data, key, key))
+}
+
+pub fun get<a>(set : hashset<a>, key : a) : <div,hash<a>|_e> maybe<a> {
+    hashmap-get(set.data, key)
+}
+
+pub fun remove<a>(set : hashset<a>, key : a) : <hash<a>,div|_e> hashset<a> {
+    Hashset(hashmap-remove(set.data, key))
+}
+
+pub fun contains<a>(set : hashset<a>, key : a) : <div,hash<a>|_e> bool {
+    match set.get(key) {
+        Nothing -> False
+        Just(_) -> True
+    }
+}
+
+pub fun list<a>(set : hashset<a>) : <div|_e> list<a> {
+    set.data.hashmap-list().map() fn (pair) {
+        pair.fst
+    }
+}
+
+pub fun length<a>(set : hashset<a>) : <div|_e> int {
+    set.data.amount
 }
