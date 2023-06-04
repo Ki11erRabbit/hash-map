@@ -135,3 +135,20 @@ pub fun get<a>(map : hashmap<a>, key : string) : <div|_e> maybe<a> {
     }
 }
 
+pub fun pop<a>(map : hashmap<a>, key : string) : <div|_e> hashmap<a> {
+    val hash_value = key.hash() % map.data.length()
+    match map.data[hash_value] {
+        Nothing -> map
+        Just(mlist) -> {
+            match mlist {
+                Nothing -> map
+                Just(list) -> {
+                    var new_list := list.filter() fn (pair) {
+                        pair.fst != key
+                    }
+                    map(data = map.data.take(hash_value) ++ Cons(Just(new_list), map.data.drop(hash_value + 1)), amount = map.amount - 1)
+                }
+            }
+        }
+    }
+}

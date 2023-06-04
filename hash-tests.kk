@@ -38,6 +38,22 @@ fun test_get() {
     }
 }
 
+fun test_pop() {
+    var map := hashmap()
+
+    for(0, 1000) fn (i) {
+        println("Inserting " ++ i.show() ++ " into map ")
+        map := map.insert(i.show(), i)
+        ()
+    }
+
+    for(0, 1000) fn (i) {
+        println("Popping " ++ i.show() ++ " from map ")
+        map.pop(i.show())
+        ()
+    }
+}
+
 fun main() {
    
     (handler {
@@ -49,12 +65,22 @@ fun main() {
             test_insert()
         }
     
-    with handler 
+    (handler {
         ctl throw-exn(exn) {
             print("Exception: ")
             exn.show().println()
             ()
+        }}) fn () {
+            test_get()
         }
-    test_get()
+        
+    (handler {
+        ctl throw-exn(exn) {
+            print("Exception: ")
+            exn.show().println()
+            ()
+        }}) fn () {
+            test_pop()
+        }
 }
 
