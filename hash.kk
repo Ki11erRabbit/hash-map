@@ -1,9 +1,6 @@
 
 module hash
 
-pub effect cmp<k> {
-    fun cmp(x: k, y: k) : order
-}
 
 pub effect hash<h> {
     fun hash(x : h) : int
@@ -59,11 +56,12 @@ fun second<a,b>(pair : pair<a,b>) : b {
 pub struct hashmap<a,b> {
     amount : int
     data : list<maybe<list<pair<a,b>>>>
+    cmp : (a,a) -> order
 }
 
 
-pub fun hashmap() : hashmap<a,b> {
-    Hashmap(0, [Nothing])
+pub fun hashmap(cmp : (a,a) -> order) : hashmap<a,b> {
+    Hashmap(0, [Nothing], cmp)
 }
 
 
@@ -100,11 +98,11 @@ fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
             }
         }
     }
-    Hashmap(map.amount,new_table) 
+    Hashmap(map.amount,new_table,map.cmp) 
 }
 
 
-pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <cmp<a>, hash<a>,exn,div|_e> hashmap<a,b>{
+pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,div|_e> hashmap<a,b>{
     val new_map = if map.amount / 2 > map.data.length() then {
         map.rehash()
     } else {
@@ -124,7 +122,7 @@ pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <cmp<a>, hash<a>,e
                 }
                 Just(row) -> {
                     val new_row = row.filter() fn (pair) {
-                        match cmp(pair.fst, key) {
+                        match (map.cmp)(pair.fst, key) {
                             Lt -> True
                             Eq -> False
                             Gt -> True
@@ -139,7 +137,7 @@ pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <cmp<a>, hash<a>,e
 }
 
 
-pub fun get<a,b>(map : hashmap<a,b>, key : a) : <cmp<a>, div,hash<a>|_e> maybe<b> {
+pub fun get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
     
     val hash_value = key.hash() % map.data.length();
     match map.data[hash_value] {
@@ -152,7 +150,7 @@ pub fun get<a,b>(map : hashmap<a,b>, key : a) : <cmp<a>, div,hash<a>|_e> maybe<b
                     match list[key.hash() % list.length()] {
                         Nothing -> Nothing
                         Just(pair) -> {
-                            match cmp(pair.fst, key) {
+                            match (map.cmp)(pair.fst, key) {
                                 Lt -> Nothing
                                 Eq -> Just(pair.snd)
                                 Gt -> Nothing
@@ -166,7 +164,7 @@ pub fun get<a,b>(map : hashmap<a,b>, key : a) : <cmp<a>, div,hash<a>|_e> maybe<b
 }
 
 
-pub fun pop<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, cmp<a>, div|_e> hashmap<a,b> {
+pub fun pop<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
     
     val hash_value = key.hash() % map.data.length()
     match map.data[hash_value] {
@@ -177,7 +175,7 @@ pub fun pop<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, cmp<a>, div|_e> hashma
                 Just(list) -> {
                     
                     var new_list := list.filter() fn (pair) {
-                        match cmp(pair.fst, key) {
+                        match (map.cmp)(pair.fst, key) {
                             Lt -> True
                             Eq -> False
                             Gt -> True

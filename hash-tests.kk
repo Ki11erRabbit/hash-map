@@ -2,10 +2,10 @@ pub import hash
 
 
 fun test_insert() {
-    var map := hashmap()
+    var map : hashmap<int,int> := hashmap(compare : (int, int) -> order)
 
 
-    with fun cmp(x : int, y : int) { compare(x,y) }
+    
     with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
         println("Inserting " ++ i.show() ++ " into map ")
@@ -15,9 +15,8 @@ fun test_insert() {
 }
 
 fun test_get() {
-    var map := hashmap()
+    var map : hashmap<int,int> := hashmap(compare : (int, int) -> order)
 
-    with fun cmp(x : int, y : int) { compare(x,y) }
     with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
         println("Inserting " ++ i.show() ++ " into map ")
@@ -41,8 +40,7 @@ fun test_get() {
 }
 
 fun test_pop() {
-    var map := hashmap()
-    with fun cmp(x : int, y : int) { compare(x,y) }
+    var map : hashmap<int,int> := hashmap(compare : (int, int) -> order)
     with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
         println("Inserting " ++ i.show() ++ " into map ")
