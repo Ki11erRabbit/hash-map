@@ -4,10 +4,12 @@ pub import hash
 fun test_insert() {
     var map := hashmap()
 
+
+    with fun cmp(x : int, y : int) { compare(x,y) }
+    with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
-        print("Inserting " ++ i.show() ++ " into map ")
-        i.show().hash().println()
-        map := map.insert(i.show(), i)
+        println("Inserting " ++ i.show() ++ " into map ")
+        map := map.insert(i, i)
         ()
     }
 }
@@ -15,17 +17,17 @@ fun test_insert() {
 fun test_get() {
     var map := hashmap()
 
+    with fun cmp(x : int, y : int) { compare(x,y) }
+    with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
-        print("Inserting " ++ i.show() ++ " into map ")
-        i.show().hash().println()
-        map := map.insert(i.show(), i)
+        println("Inserting " ++ i.show() ++ " into map ")
+        map := map.insert(i, i)
         ()
     }
 
     for(0, 1000) fn (i) {
-        print("Getting " ++ i.show() ++ " from map ")
-        i.show().hash().println()
-        match map.get(i.show()) {
+        println("Getting " ++ i.show() ++ " from map ")
+        match map.get(i) {
             Nothing -> {
                 print("Nothing")
             }
@@ -40,16 +42,17 @@ fun test_get() {
 
 fun test_pop() {
     var map := hashmap()
-
+    with fun cmp(x : int, y : int) { compare(x,y) }
+    with fun hash(x : int) { hasher(x) }
     for(0, 1000) fn (i) {
         println("Inserting " ++ i.show() ++ " into map ")
-        map := map.insert(i.show(), i)
+        map := map.insert(i, i)
         ()
     }
 
     for(0, 1000) fn (i) {
         println("Popping " ++ i.show() ++ " from map ")
-        map.pop(i.show())
+        map.pop(i)
         ()
     }
 }
