@@ -1,6 +1,11 @@
 
 module hash
 
+pub effect cmp<k> {
+    fun cmp(x: k, y: k) : order
+}
+
+
 pub fun hash(str : string) : int {
     var m : int := 1000000000 + 9;
     var p_pow : int := 1;
@@ -10,6 +15,16 @@ pub fun hash(str : string) : int {
         hash_value
     }
 }
+
+pub type to_string_r
+    String(s : string)
+    NoString
+
+
+pub effect to_string<s> {
+    fun to_string(value : s) : to_string_r
+}
+
 
 /*extern import
     c file "hash-inline.c"
@@ -30,18 +45,18 @@ fun second<a,b>(pair : pair<a,b>) : b {
     pair.snd
 }
 
-pub struct hashmap<a> {
+pub struct hashmap<a,b> {
     amount : int
-    data : list<maybe<list<pair<string,a>>>>
+    data : list<maybe<list<pair<a,b>>>>
 }
 
 
-pub fun hashmap() : hashmap<a> {
+pub fun hashmap() : hashmap<a,b> {
     Hashmap(0, [Nothing])
 }
 
 
-fun rehash<a>(map: hashmap<a>) : <div|_e> hashmap<a> {
+fun rehash<a,b>(map: hashmap<a,b>) : <div, exn, to_string<a>|_e> hashmap<a,b> {
     /*val flat_table = map.data.flatmap() fn (lst : maybe<list<pair<string,a>>>) {
         match lst {
             Nothing -> Nil
@@ -59,7 +74,11 @@ fun rehash<a>(map: hashmap<a>) : <div|_e> hashmap<a> {
             Nothing -> ()
             Just(lst) -> {
                 lst.foreach() fn (pair) {
-                    val hash_value = hash(pair.fst) % (map.data.length() * 2);
+                    val str = match to_string(pair.fst)
+                        String(s) -> s
+                        NoString -> throw("Item could not be converted to string")
+
+                    val hash_value = hash(str) % (map.data.length() * 2);
                     match new_table[hash_value] {
                         Nothing -> {
                             //new_table[hash_value] := Just([pair])
@@ -84,14 +103,24 @@ fun rehash<a>(map: hashmap<a>) : <div|_e> hashmap<a> {
     Hashmap(0,new_table) 
 }
 
-pub fun insert<a>(map : hashmap<a>, key : string, value : a) : <console,div|_e> hashmap<a>{
+pub fun insert<b>(map: hashmap<int,b>, key : int, value : b) : <pure|e> hashmap<int,b> {
+    with fun to_string(value : int) { String(value.show())}
+    with fun cmp(x : int, y : int ) { compare(x,y) }
+    insert_logic(map, key, value)
+}
+
+pub fun insert_logic<a,b>(map : hashmap<a,b>, key : a, value : b) : <cmp<a>, to_string<a>,exn,div|_e> hashmap<a,b>{
     val new_map = if map.amount / 2 > map.data.length() then {
         map.rehash()
     } else {
         map
     }
 
-    val hash_value = hash(key) % new_map.data.length();
+    val str = match to_string(key)
+        String(s) -> s
+        NoString -> throw("Item could not be converted to string")
+
+    val hash_value = hash(str) % new_map.data.length();
     match new_map.data[hash_value] {
         Nothing -> {
             throw("Hashmap too small for key " ++ hash_value.show() ++ " and length " ++ new_map.data.length().show())
@@ -103,7 +132,11 @@ pub fun insert<a>(map : hashmap<a>, key : string, value : a) : <console,div|_e> 
                 }
                 Just(row) -> {
                     val new_row = row.filter() fn (pair) {
-                        pair.fst != key
+                        match cmp(pair.fst, key) {
+                            Lt -> True
+                            Eq -> False
+                            Gt -> True
+                        }
                     }
                     new_map(data = new_map.data.take(hash_value) ++ Cons(Just(new_row ++ [Pair(key,value)]), new_map.data.drop(hash_value + 1)), amount = new_map.amount + 1)
                 }
@@ -112,8 +145,17 @@ pub fun insert<a>(map : hashmap<a>, key : string, value : a) : <console,div|_e> 
     }
 }
 
-pub fun get<a>(map : hashmap<a>, key : string) : <div|_e> maybe<a> {
-    val hash_value = key.hash() % map.data.length();
+pub fun get<b>(map : hashmap<int,b>, key : int) : <pure|_e> maybe<b> {
+    with fun to_string(value : int) { String(value.show())}
+    with fun cmp(x : int, y : int ) { compare(x,y)}
+    get_logic(map, key)
+}
+
+pub fun get_logic<a,b>(map : hashmap<a,b>, key : a) : <cmp<a>, div, exn,to_string<a>|_e> maybe<b> {
+    val str = match to_string(key)
+        String(s) -> s
+        NoString -> throw("Item could not be converted to string")
+    val hash_value = str.hash() % map.data.length();
     match map.data[hash_value] {
         Nothing -> Nothing
         Just(mlist) -> {
@@ -122,10 +164,10 @@ pub fun get<a>(map : hashmap<a>, key : string) : <div|_e> maybe<a> {
                 Just(list) -> {
                     var value := Nothing
                     list.foreach() fn (pair) {
-                        if pair.fst == key then {
-                            value := Just(pair.snd)
-                        } else {
-                            ()
+                        match cmp(pair.fst, key) {
+                            Lt -> ()
+                            Eq -> value := Just(pair.snd)
+                            Gt -> ()
                         }
                     }
                     value
@@ -135,8 +177,17 @@ pub fun get<a>(map : hashmap<a>, key : string) : <div|_e> maybe<a> {
     }
 }
 
-pub fun pop<a>(map : hashmap<a>, key : string) : <div|_e> hashmap<a> {
-    val hash_value = key.hash() % map.data.length()
+pub fun pop<b>(map : hashmap<int,b>, key : int) : <pure|_e> hashmap<int,b> {
+    with fun to_string(value : int) { String(value.show())}
+    with fun cmp(x : int, y : int) { compare(x,y) }
+    pop_logic(map, key)
+}
+
+pub fun pop_logic<a,b>(map : hashmap<a,b>, key : a) : <to_string<a>, cmp<a>, exn, div|_e> hashmap<a,b> {
+    val str = match to_string(key)
+        String(s) -> s
+        NoString -> throw("Item could not be converted to string")
+    val hash_value = str.hash() % map.data.length()
     match map.data[hash_value] {
         Nothing -> map
         Just(mlist) -> {
@@ -144,7 +195,11 @@ pub fun pop<a>(map : hashmap<a>, key : string) : <div|_e> hashmap<a> {
                 Nothing -> map
                 Just(list) -> {
                     var new_list := list.filter() fn (pair) {
-                        pair.fst != key
+                        match cmp(pair.fst, key) {
+                            Lt -> True
+                            Eq -> False
+                            Gt -> True
+                        }
                     }
                     map(data = map.data.take(hash_value) ++ Cons(Just(new_list), map.data.drop(hash_value + 1)), amount = map.amount - 1)
                 }
