@@ -68,12 +68,7 @@ pub fun hashmap() : hashmap<a,b> {
 
 
 fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
-    /*val flat_table = map.data.flatmap() fn (lst : maybe<list<pair<string,a>>>) {
-        match lst {
-            Nothing -> Nil
-            Just(lst) -> lst
-        }
-    }*/
+    
     var new_table := [Nothing]
     for(0, map.data.length() * 2) fn (i) {
         new_table ++ [Nothing]
@@ -88,14 +83,12 @@ fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
                     val hash_value = hash(pair.fst) % (map.data.length() * 2);
                     match new_table[hash_value] {
                         Nothing -> {
-                            //new_table[hash_value] := Just([pair])
                             new_table := new_table.take(hash_value) ++ Cons(Just([pair]),new_table.drop(hash_value + 1))
                         }
                         Just(lst) -> {
                             match lst {
                                 Nothing -> ()
                                 Just(row) -> {
-                                    //new_table[hash_value] := Just(lst ++ [pair])
                                     new_table := new_table.take(hash_value) ++ Cons(Just(row ++ [pair]), new_table.drop(hash_value + 1))
                                     ()
                                 }
@@ -110,11 +103,6 @@ fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
     Hashmap(map.amount,new_table) 
 }
 
-/*pub fun insert<b>(map: hashmap<int,b>, key : int, value : b) : <pure|e> hashmap<int,b> {
-    with fun hash(value : int) { hasher(value)}
-    with fun cmp(x : int, y : int ) { compare(x,y) }
-    insert_logic(map, key, value)
-}*/
 
 pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <cmp<a>, hash<a>,exn,div|_e> hashmap<a,b>{
     val new_map = if map.amount / 2 > map.data.length() then {
@@ -150,11 +138,6 @@ pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <cmp<a>, hash<a>,e
     }
 }
 
-/*pub fun get<b>(map : hashmap<int,b>, key : int) : <pure|_e> maybe<b> {
-    with fun to_string(value : int) { String(value.show())}
-    with fun cmp(x : int, y : int ) { compare(x,y)}
-    get_logic(map, key)
-}*/
 
 pub fun get<a,b>(map : hashmap<a,b>, key : a) : <cmp<a>, div,hash<a>|_e> maybe<b> {
     
@@ -182,11 +165,6 @@ pub fun get<a,b>(map : hashmap<a,b>, key : a) : <cmp<a>, div,hash<a>|_e> maybe<b
     }
 }
 
-/*pub fun pop<b>(map : hashmap<int,b>, key : int) : <pure|_e> hashmap<int,b> {
-    with fun to_string(value : int) { String(value.show())}
-    with fun cmp(x : int, y : int) { compare(x,y) }
-    pop_logic(map, key)
-}*/
 
 pub fun pop<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, cmp<a>, div|_e> hashmap<a,b> {
     
