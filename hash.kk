@@ -56,10 +56,10 @@ pub fun hashmap(cmp : (a,a) -> order) : hashmap<a,b> {
     Hashmap(0, [Nothing], cmp)
 }
 
-pub fun listhashmap<a,b>(list : list<pair<a,b>>, cmp : (a,a) -> order) : <div,hash<a>|_e> hashmap<a,b> {
-    Hashmap(list.length(), list.foldl(hashmap(cmp)) fn (map, pair) {
+pub fun make-hashmap<a,b>(list : list<pair<a,b>>, cmp : (a,a) -> order) : <div,hash<a>|_e> hashmap<a,b> {
+    list.foldl(hashmap(cmp)) fn (map, pair) {
         map.insert(pair.fst, pair.snd)
-    }, cmp)
+    }
 }
 
 fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
@@ -100,10 +100,6 @@ fun rehash<a,b>(map: hashmap<a,b>) : <div, hash<a>|_e> hashmap<a,b> {
 
 
 pub fun insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,div|_e> hashmap<a,b>{
-    hashmap-insert(map, key, value)
-}
-
-fun hashmap-insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,div|_e> hashmap<a,b>{
     val new_map = if map.amount / 2 > map.data.length() then {
         map.rehash()
     } else {
@@ -139,11 +135,6 @@ fun hashmap-insert<a,b>(map : hashmap<a,b>, key : a, value : b) : <hash<a>,exn,d
 
 
 pub fun get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
-    hashmap-get(map, key)
-}
-
-
-fun hashmap-get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
     
     val hash_value = key.hash() % map.data.length();
     match map.data[hash_value] {
@@ -171,10 +162,6 @@ fun hashmap-get<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> maybe<b> {
 
 
 pub fun remove<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
-    hashmap-remove(map, key)
-}
-
-fun hashmap-remove<a,b>(map : hashmap<a,b>, key : a) : <hash<a>, div|_e> hashmap<a,b> {
     
     val hash_value = key.hash() % map.data.length()
     match map.data[hash_value] {
@@ -206,10 +193,6 @@ pub fun contains<a,b>(map : hashmap<a,b>, key : a) : <div,hash<a>|_e> bool {
 }
 
 pub fun list<a,b>(map : hashmap<a,b>) : <div|_e> list<pair<a,b>> {
-    hashmap-list(map)
-}
-
-fun hashmap-list<a,b>(map : hashmap<a,b>) : <div|_e> list<pair<a,b>> {
     var list := []
     map.data.reverse().foreach() fn (row) {
         match row {
@@ -224,7 +207,6 @@ fun hashmap-list<a,b>(map : hashmap<a,b>) : <div|_e> list<pair<a,b>> {
     }
     list
 }
-
 
 pub fun keys<a,b>(hashmap : hashmap<a,b>) : <div|_e> list<a> {
     hashmap.list().map() fn (pair) {
@@ -244,29 +226,138 @@ pub fun length<a,b>(map : hashmap<a,b>) : int {
 
 
 struct hashset<a>
-    data : hashmap<a,a>
+    amount : int
+    data : list<maybe<list<a>>>
+    cmp : (a,a) -> order
 
 
 pub fun hashset(cmp : (a,a) -> order) : hashset<a> {
-    Hashset(hashmap(cmp))
+    Hashset(0, [Nothing], cmp)
 }
 
-pub fun hashset(list : list<a>, cmp : (a,a) -> order) : hashset<a> {
-    Hashset(list.foldl(hashmap(cmp)) fn (map, key) {
-        map.insert(key, key)
-    })
+pub fun make-hashset(list : list<a>, cmp : (a,a) -> order) : <div,exn, hash<a>|_e> hashset<a> {
+    list.foldl(hashset(cmp)) fn (set, key) {
+        set.insert(key)
+    }
 }
 
-pub fun insert<a>(set : hashset<a>, key : a) : <hash<a>,div|_e> hashset<a> {
-    Hashset(hashmap-insert(set.data, key, key))
+fun rehash<a>(set: hashset<a>) : <div, hash<a>|_e> hashset<a> {
+    
+    var new_table := [Nothing]
+    for(0, set.data.length() * 2) fn (i) {
+        new_table ++ [Nothing]
+        ()
+    }
+    val table = set.data
+    table.foreach() fn (lst) {
+        match lst {
+            Nothing -> ()
+            Just(lst) -> {
+                lst.foreach() fn (value) {
+                    val hash_value = hash(value) % (set.data.length() * 2);
+                    match new_table[hash_value] {
+                        Nothing -> {
+                            new_table := new_table.take(hash_value) ++ Cons(Just([value]),new_table.drop(hash_value + 1))
+                        }
+                        Just(lst) -> {
+                            match lst {
+                                Nothing -> ()
+                                Just(row) -> {
+                                    new_table := new_table.take(hash_value) ++ Cons(Just(row ++ [value]), new_table.drop(hash_value + 1))
+                                    ()
+                                }
+                            }
+                            
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Hashset(set.amount,new_table,set.cmp) 
+}
+
+pub fun insert<a>(set : hashset<a>, key : a) : <hash<a>,exn,div|_e> hashset<a> {
+    val new_set = if set.amount / 2 > set.data.length() then {
+        set.rehash()
+    } else {
+        set
+    }
+
+    val hash_value = key.hash() % new_set.data.length();
+    match new_set.data[hash_value] {
+        Nothing -> {
+            throw("Hashset too small for key " ++ hash_value.show() ++ " and length " ++ new_set.data.length().show())
+        }
+        Just(lst) -> {
+            match lst {
+                Nothing -> {
+                    new_set(data = new_set.data.take(hash_value) ++ Cons(Just([key]), new_set.data.drop(hash_value + 1)), amount = new_set.amount + 1)
+                }
+                Just(row) -> {
+                    val new_row = row.filter() fn (k) {
+                        match (new_set.cmp)(k, key) {
+                            Lt -> True
+                            Eq -> False
+                            Gt -> True
+                        }
+                    }
+
+                    new_set(data = new_set.data.take(hash_value) ++ Cons(Just(Cons(key, new_row)), new_set.data.drop(hash_value + 1)), amount = new_set.amount + 1)
+                }
+            }
+        }
+    }
 }
 
 pub fun get<a>(set : hashset<a>, key : a) : <div,hash<a>|_e> maybe<a> {
-    hashmap-get(set.data, key)
+        
+        val hash_value = key.hash() % set.data.length();
+        match set.data[hash_value] {
+            Nothing -> Nothing
+            Just(lst) -> {
+                match lst {
+                    Nothing -> Nothing
+                    Just(list) -> {
+                        var value := Nothing
+                        match list[key.hash() % list.length()] {
+                            Nothing -> Nothing
+                            Just(value) -> {
+                                match (set.cmp)(value, key) {
+                                    Lt -> Nothing
+                                    Eq -> Just(value)
+                                    Gt -> Nothing
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 }
 
 pub fun remove<a>(set : hashset<a>, key : a) : <hash<a>,div|_e> hashset<a> {
-    Hashset(hashmap-remove(set.data, key))
+        
+        val hash_value = key.hash() % set.data.length()
+        match set.data[hash_value] {
+            Nothing -> set
+            Just(mlist) -> {
+                match mlist {
+                    Nothing -> set
+                    Just(list) -> {
+                        
+                        var new_list := list.filter() fn (value) {
+                            match (set.cmp)(value, key) {
+                                Lt -> True
+                                Eq -> False
+                                Gt -> True
+                            }
+                        }
+                        set(data = set.data.take(hash_value) ++ Cons(Just(new_list), set.data.drop(hash_value + 1)), amount = set.amount - 1)
+                    }
+                }
+            }
+        }
 }
 
 pub fun contains<a>(set : hashset<a>, key : a) : <div,hash<a>|_e> bool {
@@ -277,11 +368,21 @@ pub fun contains<a>(set : hashset<a>, key : a) : <div,hash<a>|_e> bool {
 }
 
 pub fun list<a>(set : hashset<a>) : <div|_e> list<a> {
-    set.data.hashmap-list().map() fn (pair) {
-        pair.fst
+    var list := []
+    set.data.reverse().foreach() fn (row) {
+        match row {
+            Nothing -> ()
+            Just(row) -> {
+                row.foreach() fn (value) {
+                    list := Cons(value, list)
+                    ()
+                }
+            }
+        }
     }
+    list
 }
 
 pub fun length<a>(set : hashset<a>) : <div|_e> int {
-    set.data.amount
+    set.amount
 }
